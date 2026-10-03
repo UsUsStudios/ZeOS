@@ -15,10 +15,10 @@ local function clone(t)
 end
 
 local function include(package)
-	local handle = files.open("system:/boot/env/" .. package .. ".lua")
+	local handle = files.open("0:system:/boot/env/" .. package .. ".lua")
 	local data = handle.read("a")
 	handle.close()
-	local f, err = load(data, "system:/boot/env/" .. package .. ".lua", nil, _G)
+	local f, err = load(data, "0:system:/boot/env/" .. package .. ".lua", nil, _G)
 	if err then
 		error(err)
 	end

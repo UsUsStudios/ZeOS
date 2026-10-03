@@ -3,10 +3,10 @@ _G.OS_NAME = "ZeOS"
 _G.OS_VERSION = "v0.0.1"
 
 function _G.include(path, env)
-	local handle = files.open("system:/boot/" .. path)
+	local handle = files.open("0:system:/boot/" .. path)
 	local data = handle.read("a")
 	handle.close()
-	local f, err = load(data, "system:/boot/" .. path, nil, env or _G)
+	local f, err = load(data, "0:system:/boot/" .. path, nil, env or _G)
 	if err then
 		error(err)
 	end
@@ -23,18 +23,33 @@ function _G.panic(cause, msg)
 	chip.shutdown()
 end
 
+do
+	local handle = files.open("system:/boot/files-shim.lua")
+	local data = handle.read("a")
+	handle.close()
+	local f, err = load(data, "0:system:/boot/files-shim.lua", nil, _G)
+	if err or not f then
+		error(err)
+	end
+	f()
+end
 include("scheduler.lua")()
 local generate_env = include("env.lua")
 
-scheduler.new_process(function()
-	local handle = files.open("system:/init.lua")
+local function execute(path, cwd, env)
+	local handle = files.open(path)
 	local data = handle.read("a")
 	handle.close()
-	local f, err = load(data, "system:/init.lua", nil, generate_env("0:system:/"))
+	local f, err = load(data, path, nil, env or generate_env(cwd))
 	if err or not f then
-		panic("unable to open system:/init.lua", err)
+		panic("unable to open " .. path, err)
 	end
 	scheduler.new_process(f)
+end
+
+scheduler.new_process(function()
+	execute("0:system:/init.lua", "0:system:/")
+	execute("0:system:/boot/daemons/devent.lua", "0:system:/", _G)
 	while true do
 		coroutine.yield()
 	end
