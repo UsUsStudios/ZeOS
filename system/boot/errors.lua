@@ -17,8 +17,7 @@ local function wrap_process(fn, pcb, ...)
 	local ok, err = xpcall(fn, traceback, ...)
 
 	if not ok then
-		print(err)
-		error(err)
+		coroutine.yield(err, "error")
 	end
 end
 

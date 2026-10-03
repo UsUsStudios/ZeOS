@@ -74,7 +74,7 @@ function scheduler.tick()
 			local start = gettime()
 			pcb.state = "running"
 			scheduler.running = pcb
-			local ok, err = coroutine.resume(pcb.co)
+			local ok, err, code = coroutine.resume(pcb.co)
 			scheduler.running = nil
 			pcb.error = err
 
@@ -87,7 +87,7 @@ function scheduler.tick()
 				pcb.exit_code = pcb.exit_code or 0
 
 				scheduler.dead(pcb, "coroutine found dead")
-			elseif not ok then
+			elseif not ok or code == "error" then
 				-- uncaught error
 				pcb.state = "zombie"
 				pcb.exit_code = -1
