@@ -12,15 +12,9 @@ local function dump_table(name, indent, t)
 	end
 end
 
---print("IMPORTANT PACKAGES DUMP")
---dump_table("sys", "    ", _G.sys)
---dump_table("event", "    ", _G.event)
---print()
---print("dump complete")
---print()
-while true do
-	local name, a, b = event.pull()
-	if name == "key" then
-		print("key", a, b)
-	end
-end
+print("IMPORTANT PACKAGES DUMP")
+dump_table("sys", "    ", _G.sys)
+dump_table("event", "    ", _G.event)
+print()
+print("dump complete")
+print()

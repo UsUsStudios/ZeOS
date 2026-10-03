@@ -57,13 +57,15 @@ g._VERSION = _VERSION
 g.utf8 = clone(utf8)
 g.table = clone(table)
 g.math = clone(math)
-g.bit32 = clone(bit32)
+g.bit32 = clone(_G.bit32)
 g.string = clone(string)
 g.coroutine = clone(coroutine)
 
 g.CWD = ...
 
+-- neato-defined packages
 g.sys = include("sys")
 g.event = include("event")
+g.crypto = clone(_G.crypto) -- WARNING: neetemu doesn't include crypto at the moment so this is nil
 
 return g
