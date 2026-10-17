@@ -1,4 +1,5 @@
 _G.screen.set()
+_G.screen.draw()
 _G.OS_NAME = "ZeOS"
 _G.OS_VERSION = "v0.0.1"
 
