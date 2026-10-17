@@ -34,7 +34,9 @@ function scheduler.new_process(fn, args)
 		event_queue = {}, -- per-process infinite event queue
 	}
 	pcb.co = coroutine.create(function()
-		wrap_process(fn, pcb, table.unpack(args or {}))
+		wrap_process(function()
+			pcb.exit_code = fn(table.unpack(args or {}))
+		end, pcb)
 	end)
 	debug.sethook(pcb.co, function()
 		if coroutine.isyieldable() then

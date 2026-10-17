@@ -1,0 +1,22 @@
+- [ ] NEATO `core` APIs
+  - [x] cwd
+  - [x] requestNeato
+  - [ ] loadfile
+  - [ ] package-require
+  - [x] sys
+  - [x] event
+  - [ ] fs
+  - [ ] crypto
+  - [ ] term
+
+- [ ] NEATO extensions
+  - [ ] stdio
+  - [ ] env
+  - [ ] time
+  - [ ] proc
+  - [ ] user
+  - [ ] system
+  - [ ] screen
+  - [ ] spp
+  - [ ] dpp
+  - [ ] rpp

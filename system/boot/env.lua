@@ -61,7 +61,9 @@ g.bit32 = clone(_G.bit32)
 g.string = clone(string)
 g.coroutine = clone(coroutine)
 
+-- other stuff
 g.CWD = ...
+g.requestNeato = function() end
 
 -- neato-defined packages
 g.sys = include("sys")

@@ -13,8 +13,8 @@ local function traceback(err)
 	return table.concat(tracelist, "\n")
 end
 
-local function wrap_process(fn, pcb, ...)
-	local ok, err = xpcall(fn, traceback, ...)
+local function wrap_process(fn, pcb)
+	local ok, err = xpcall(fn, traceback)
 
 	if not ok then
 		coroutine.yield(err, "error")

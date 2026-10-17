@@ -7,12 +7,17 @@ local function add(extension, version)
 end
 
 add("core", 2)
---add("ext.screen", 1)
---add("ext.dpp", 2)
---add("ext.spp", 2)
--- drafts
---add("ext.rpp", 1)
---add("ext.sppRemote", 1)
+--add("ext.screen")
+--add("ext.sppRemote")
+--add("ext.stdio")
+--add("ext.env")
+--add("ext.time")
+--add("ext.proc")
+--add("ext.user")
+--add("ext.system")
+--add("ext.spp")
+--add("ext.dpp")
+--add("ext.rpp")
 
 function sys.getOSName()
 	return OS_NAME
