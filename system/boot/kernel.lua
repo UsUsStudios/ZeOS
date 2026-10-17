@@ -55,7 +55,7 @@ scheduler.new_process(function()
 	end
 end)
 
-local gettime = chip.getTime
+local gettime = chip.getUnixTime
 local loads = scheduler.loads
 local pid1 = scheduler.processes[1]
 
@@ -66,15 +66,13 @@ while true do
 	local start = gettime()
 	local ticking_time = gettime() - last_time
 	if pid1.state ~= "ready" then
-		panic("PID 1 is dead", "exit code: " .. tostring(pid1.exit_code) .. "\nerror: " .. tostring(pid1.error))
+		panic("pid 1 is dead", "exit code: " .. tostring(pid1.exit_code) .. "\nerror: " .. tostring(pid1.error))
 	end
 	scheduler.cpu_load = ticking_time / scheduler.time_period * 100
 
 	-- wait until the next tick is scheduled
 	while last_time + scheduler.time_period > gettime() do
-		for _ = 0, 100 do
-			coroutine.yield()
-		end
+		coroutine.yield()
 	end
 	loads.idle = (gettime() - start) / scheduler.time_period * 100
 end

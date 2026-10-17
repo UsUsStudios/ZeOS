@@ -1,1 +1,1 @@
-neetemu --disk-root .. --disk 6
+neetemu neatobios/bios.lua .
