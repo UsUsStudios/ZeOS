@@ -1,6 +1,13 @@
 local event = {}
 
 function event.pull(filter, timeout)
+	if type(filter) ~= "string" and filter ~= nil then
+		error("filter must be string or nil", 2)
+	end
+	if type(timeout) ~= "number" and timeout ~= nil then
+		error("timeout must be number or nil", 2)
+	end
+
 	local event_queue = scheduler.running.event_queue
 
 	if timeout and timeout < 0 then
@@ -31,6 +38,10 @@ function event.poll()
 end
 
 function event.push(name, ...)
+	if type(name) ~= "string" then
+		error("name must be string or nil", 2)
+	end
+
 	table.insert(scheduler.running.event_queue, { name, ... })
 
 	return true
