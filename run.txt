@@ -1,1 +1,1 @@
-neetemu neatobios/bios.lua .
+neetemu --disk .

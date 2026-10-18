@@ -1,5 +1,16 @@
 local g = {}
 
+g.CWD = ...
+
+local function shallowcopy(t, addkey, addval)
+	local copy = {}
+	copy[addkey] = addval
+	for key, value in pairs(t) do
+		copy[key] = value
+	end
+	return copy
+end
+
 local function clone(t)
 	local copy
 	if type(t) == "table" then
@@ -18,7 +29,7 @@ local function include(package)
 	local handle = files.open("0:system:/boot/env/" .. package .. ".lua")
 	local data = handle.read("a")
 	handle.close()
-	local f, err = load(data, "0:system:/boot/env/" .. package .. ".lua", nil, _G)
+	local f, err = load(data, "0:system:/boot/env/" .. package .. ".lua", nil, shallowcopy(_G, "CWD", g.CWD))
 	if err then
 		error(err)
 	end
@@ -62,12 +73,14 @@ g.string = clone(string)
 g.coroutine = clone(coroutine)
 
 -- other stuff
-g.CWD = ...
-g.requestNeato = function() end
+g.requestNeato = function()
+	return false
+end
 
 -- neato-defined packages
 g.sys = include("sys")
 g.event = include("event")
+g.fs = include("fs")
 g.crypto = clone(_G.crypto) -- WARNING: neetemu doesn't include crypto at the moment so this is nil
 
 return g

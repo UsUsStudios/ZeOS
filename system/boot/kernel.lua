@@ -41,7 +41,13 @@ local function execute(path, cwd, env)
 	local handle = files.open(path)
 	local data = handle.read("a")
 	handle.close()
-	local f, err = load(data, path, nil, env or generate_env(cwd))
+	if not env then
+		env = generate_env(cwd)
+	else
+		env["CWD"] = cwd
+	end
+
+	local f, err = load(data, path, nil, env)
 	if err or not f then
 		panic("unable to open " .. path, err)
 	end
@@ -49,7 +55,7 @@ local function execute(path, cwd, env)
 end
 
 scheduler.new_process(function()
-	execute("0:system:/init.lua", "0:system:/")
+	execute("0:system:/init.lua", "0:system:/boot")
 	execute("0:system:/boot/daemons/devent.lua", "0:system:/", _G)
 	while true do
 		coroutine.yield()
