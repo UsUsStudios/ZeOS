@@ -258,7 +258,9 @@ function fs.stat(path)
 	local neetpath, err1, err2 = walkNeatoPath(path)
 
 	if neetpath then
-		return { type = files.isFile(neetpath) and "file" or "dir" } -- TODO: add size
+		local h = files.open(neetpath, "r")
+		local size = h.seek("end", -1)
+		return { type = files.isFile(neetpath) and "file" or "dir", size = size }
 	end
 	return nil, err1, err2
 end
