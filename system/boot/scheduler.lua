@@ -18,7 +18,7 @@ function scheduler.queue(pcb)
 end
 
 -- create a new process running the function fn with an optional parent pid and args
-function scheduler.new_process(fn, args)
+function scheduler.new_process(fn, args, nohook)
 	if fn == nil then
 		error("cannot start process with function nil")
 	end
@@ -38,11 +38,13 @@ function scheduler.new_process(fn, args)
 			pcb.exit_code = fn(table.unpack(args or {}))
 		end, pcb)
 	end)
-	debug.sethook(pcb.co, function()
-		if coroutine.isyieldable() then
-			coroutine.yield()
-		end
-	end, "", 500)
+	if not nohook then
+		debug.sethook(pcb.co, function()
+			if coroutine.isyieldable() then
+				coroutine.yield()
+			end
+		end, "", 500)
+	end
 
 	scheduler.processes[pcb.pid] = pcb
 	scheduler.queue(pcb)

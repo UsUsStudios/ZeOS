@@ -8,7 +8,7 @@
   - [ ] fs
     - [x] basic stuff
     - [ ] file handles
-    - [ ] disk IDs
+    - [x] disk IDs
   - [ ] crypto
   - [ ] term
 

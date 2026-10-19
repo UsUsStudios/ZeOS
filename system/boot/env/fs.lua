@@ -106,13 +106,13 @@ end
 local function walkNeatoPath(path, skiplast)
 	local parts = split(path, ":")
 	local disk, partition, filename = parts[1], parts[2], parts[3]
+
 	if string.sub(filename, 1, 1) ~= "/" then
 		error("filename portion of NEATO path must begin with a /", 3)
 	end
 	local last
 
 	if skiplast then
-		print(4)
 		local filename_segs = split(filename, "/")
 		last = filename_segs[#filename_segs]
 		filename = "/" .. table.concat(filename_segs, "/", 1, #filename_segs - 1)
@@ -125,8 +125,17 @@ local function walkNeatoPath(path, skiplast)
 			end
 		end
 		return nil, "ENOENT", "The path " .. partition .. ":" .. filename .. " does not exist at any attached disk"
+	elseif tonumber(disk) == nil then
+		local diskslot = _G.attached_disks[disk]
+		if not diskslot then
+			return nil, "ENODEV", "the disk ID '" .. disk .. "' is not connected"
+		end
+		local res, err1, err2 = walk(diskslot, partition, filename)
+		if res then
+			return res, last
+		end
+		return nil, err1, err2
 	else
-		-- TODO: add disk IDs
 		local res, err1, err2 = walk(disk, partition, filename)
 		if res then
 			return res, last
@@ -266,7 +275,11 @@ function fs.stat(path)
 end
 
 function fs.getDisks()
-	return files.getDisks() -- TODO: add disk ID
+	local disks = {}
+	for disk, _ in pairs(_G.attached_disks) do
+		disks[#disks + 1] = disk
+	end
+	return disks
 end
 
 function fs.getPartitions(disk)

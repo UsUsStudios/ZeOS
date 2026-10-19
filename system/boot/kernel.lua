@@ -33,11 +33,39 @@ do
 		error(err)
 	end
 	f()
+
+	-- initialize _G.diskids
+	if files.isFile("0:system:/boot/diskids") then
+		handle = files.open("0:system:/boot/diskids")
+		data = handle.read("a")
+		handle.close()
+
+		local function split(inputstr, sep)
+			local t = {}
+			for str in string.gmatch(inputstr, "([^" .. sep .. "]+)") do
+				table.insert(t, str)
+			end
+			return t
+		end
+
+		local pairs = split(data, "/")
+		_G.diskids = {}
+		for _, entry in ipairs(pairs) do
+			local k, v = table.unpack(split(entry, ":"))
+			_G.diskids[k] = v
+		end
+	else
+		_G.diskids = {}
+		handle = files.open("0:system:/boot/diskids", "a")
+		handle.close()
+	end
+	_G.attached_disks = { hdd = 0 }
 end
+
 include("scheduler.lua")()
 local generate_env = include("env.lua")
 
-local function execute(path, cwd, env)
+local function execute(path, cwd, env, nohook)
 	local handle = files.open(path)
 	local data = handle.read("a")
 	handle.close()
@@ -51,12 +79,13 @@ local function execute(path, cwd, env)
 	if err or not f then
 		panic("unable to open " .. path, err)
 	end
-	scheduler.new_process(f)
+	scheduler.new_process(f, nil, nohook)
 end
 
 scheduler.new_process(function()
+	execute("0:system:/boot/daemons/ddisks.lua", "0:system:/", _G, true)
+	execute("0:system:/boot/daemons/devent.lua", "0:system:/", _G, true)
 	execute("0:system:/init.lua", "0:system:/boot")
-	execute("0:system:/boot/daemons/devent.lua", "0:system:/", _G)
 	while true do
 		coroutine.yield()
 	end
