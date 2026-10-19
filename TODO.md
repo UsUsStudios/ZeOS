@@ -6,6 +6,9 @@
   - [x] sys
   - [x] event
   - [ ] fs
+    - [x] basic stuff
+    - [ ] file handles
+    - [ ] disk IDs
   - [ ] crypto
   - [ ] term
 

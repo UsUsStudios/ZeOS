@@ -1,5 +1,36 @@
 local fs = {}
 
+local fs_points = {
+	["system.root"] = "0:system:/",
+	["system.bin"] = "0:system:/bin/",
+	["system.sbin"] = "0:system:/bin/",
+	["system.libraries"] = "0:system:/lib/",
+	["system.source"] = "0:system:/app/src/",
+	["system.config"] = "0:system:/cfg/",
+	["system.boot"] = "0:system:/boot/",
+	["software.opt"] = "0:system:/app/",
+	["software.opt.config"] = "0:system:/app/cfg/",
+	["software.opt.data"] = "0:system:/app/data/",
+	["software.local"] = "0:system:/app/",
+	["software.localData"] = "0:system:/app/data/",
+	["software.data"] = "0:system:/share/",
+	["storage.persistent"] = "0:system:/var/",
+	["storage.runtime"] = "0:system:/var/run/",
+	["storage.state"] = "0:system:/app/cache/",
+	["storage.cache"] = "0:system:/app/cache/",
+	["storage.log"] = "0:system:/var/log/",
+	["storage.spool"] = "0:system:/var/spool/",
+	["storage.lock"] = "0:system:/var/lock/",
+	["storage.mail"] = "0:system:/var/mail/",
+	["storage.crash"] = "0:system:/var/crash/",
+	["storage.games"] = "0:system:/app/data/",
+	["storage.temporary"] = "0:system:/tmp/",
+	["storage.temporaryPersistent"] = "0:system:/var/tmp",
+	["user.home"] = "0:system:/usr/",
+	["user.admin"] = "0:system:/usr/root/",
+	["service.data"] = "0:system:/srv/",
+}
+
 local function split(inputstr, sep)
 	local t = {}
 	for str in string.gmatch(inputstr, "([^" .. sep .. "]+)") do
@@ -43,6 +74,7 @@ local function walk(disk, partition, filename)
 
 	local path_segs = split(filename, "/")
 	local final_segs = { disk .. ":" .. partition .. ":" }
+	local concat_path
 	for i, seg in ipairs(path_segs) do
 		if seg == "." then
 		elseif seg == ".." then
@@ -51,7 +83,7 @@ local function walk(disk, partition, filename)
 			end
 		else
 			final_segs[#final_segs + 1] = seg
-			local concat_path = table.concat(final_segs, "/")
+			concat_path = table.concat(final_segs, "/")
 			if not files.exists(concat_path) then
 				return nil, "ENOENT", "The path '" .. concat_path .. "' does not exist."
 			elseif files.isFile(concat_path) and i ~= #path_segs then
@@ -67,15 +99,23 @@ local function walk(disk, partition, filename)
 		end
 	end
 
-	return table.concat(final_segs, "/")
+	return concat_path
 end
 -- walks a full NEATO path, and returns the NEET path
 -- will also check for permissions issues
-local function walkNeatoPath(path)
+local function walkNeatoPath(path, skiplast)
 	local parts = split(path, ":")
 	local disk, partition, filename = parts[1], parts[2], parts[3]
 	if string.sub(filename, 1, 1) ~= "/" then
-		error("filename portion of NEATO path must begin with a /")
+		error("filename portion of NEATO path must begin with a /", 3)
+	end
+	local last
+
+	if skiplast then
+		print(4)
+		local filename_segs = split(filename, "/")
+		last = filename_segs[#filename_segs]
+		filename = "/" .. table.concat(filename_segs, "/", 1, #filename_segs - 1)
 	end
 
 	if disk == "any" then
@@ -86,7 +126,12 @@ local function walkNeatoPath(path)
 		end
 		return nil, "ENOENT", "The path " .. partition .. ":" .. filename .. " does not exist at any attached disk"
 	else
-		return walk(disk, partition, filename)
+		-- TODO: add disk IDs
+		local res, err1, err2 = walk(disk, partition, filename)
+		if res then
+			return res, last
+		end
+		return nil, err1, err2
 	end
 end
 
@@ -95,48 +140,92 @@ function fs.exists(path)
 		error("path must be string", 2)
 	end
 
-	return
+	return walkNeatoPath(path) ~= nil
 end
 
 function fs.isFile(path)
 	if type(path) ~= "string" then
 		error("path must be string", 2)
 	end
-	return
+
+	path = walkNeatoPath(path)
+	return path ~= nil and files.isFile(path)
 end
 
 function fs.isDir(path)
 	if type(path) ~= "string" then
 		error("path must be string", 2)
 	end
-	return
+
+	path = walkNeatoPath(path)
+	return path ~= nil and files.isDir(path)
 end
 
 function fs.list(path)
 	if type(path) ~= "string" then
 		error("path must be string", 2)
 	end
-	return
+
+	local neetpath, err1, err2 = walkNeatoPath(path)
+	if neetpath then
+		if files.isFile(neetpath) then
+			return nil, "ENOTDIR", "'" .. path .. "' refers to a file, not a directory"
+		end
+		return files.getChildren(neetpath)
+	end
+	return nil, err1, err2
 end
 
 function fs.makeDir(path)
 	if type(path) ~= "string" then
 		error("path must be string", 2)
 	end
-	return
+
+	local neetpath, last, err2 = walkNeatoPath(path, true)
+	if neetpath then
+		if files.exists(neetpath .. "/" .. last) then
+			return nil, "EEXIST", "'" .. path .. "' already exists"
+		end
+		local parts = split(path, ":")
+		if files.getPartition(parts[2], parts[1]).readonly then
+			return nil, "EROFS", "cannot delete from read-only partition '" .. parts[1] .. ":" .. parts[2] .. "'"
+		end
+		files.makeDir(neetpath .. "/" .. last)
+		return true
+	end
+	return nil, neetpath, err2
 end
 
 function fs.delete(path)
 	if type(path) ~= "string" then
 		error("path must be string", 2)
 	end
-	return
+
+	local neetpath, err1, err2 = walkNeatoPath(path)
+	if neetpath then
+		if #files.getChildren(neetpath) > 0 then
+			return nil, "ENOTEMPTY", "directory '" .. path .. "' is not empty"
+		end
+		local parts = split(path, ":")
+		if parts[3] == "/" then
+			return nil, "EPERM", "cannot delete partition root '" .. path .. "'"
+		elseif files.getPartition(parts[2], parts[1]).readonly then
+			return nil, "EROFS", "cannot delete from read-only partition '" .. parts[1] .. ":" .. parts[2] .. "'"
+		end
+		-- TODO: prevent if path is in use
+		files.delete(neetpath)
+		return true
+	end
+	return nil, err1, err2, path
 end
 
 function fs.open(path, mode)
 	if type(path) ~= "string" then
 		error("path must be string", 2)
 	end
+
+	-- TODO: make file handles
+
 	return
 end
 
@@ -155,6 +244,9 @@ function fs.rename(old, new)
 	if type(new) ~= "string" then
 		error("new must be string", 2)
 	end
+
+	-- TODO: make file handles
+
 	return
 end
 
@@ -162,11 +254,17 @@ function fs.stat(path)
 	if type(path) ~= "string" then
 		error("path must be string", 2)
 	end
-	return
+
+	local neetpath, err1, err2 = walkNeatoPath(path)
+
+	if neetpath then
+		return { type = files.isFile(neetpath) and "file" or "dir" } -- TODO: add size
+	end
+	return nil, err1, err2
 end
 
 function fs.getDisks()
-	return
+	return files.getDisks() -- TODO: add disk ID
 end
 
 function fs.getPartitions(disk)
@@ -180,18 +278,30 @@ function fs.getPartitions(disk)
 		end
 	end
 
-	return
+	if not pcall(files.getPartitions, disk) then
+		return nil, "ENODEV", "the disk slot " .. disk .. " is not occupied"
+	end
+	return files.getPartitions()
 end
 
 function fs.getPoint(point)
 	if type(point) ~= "string" then
 		error("point must be string", 2)
 	end
-	return
+
+	return fs_points[point]
+end
+
+local function shallowcopy(t)
+	local copy = {}
+	for key, value in pairs(t) do
+		copy[key] = value
+	end
+	return copy
 end
 
 function fs.getPoints()
-	return
+	return shallowcopy(fs_points)
 end
 
 return fs
