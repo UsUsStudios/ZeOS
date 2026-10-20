@@ -81,6 +81,6 @@ end
 g.sys = include("sys")
 g.event = include("event")
 g.fs = include("fs")
-g.crypto = clone(_G.crypto) -- WARNING: neetemu doesn't include crypto at the moment so this is nil
+g.crypto = clone(_G.crypto)
 
 return g

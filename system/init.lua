@@ -12,9 +12,8 @@ local function dump_table(name, indent, t)
 	end
 end
 
---print("IMPORTANT PACKAGES DUMP")
---dump_table("sys", "    ", _G.sys)
---dump_table("event", "    ", _G.event)
---print()
---print("dump complete")
---print()
+print("IMPORTANT PACKAGES DUMP")
+dump_table("crypto", "    ", _G.crypto)
+print()
+print("dump complete")
+print()
