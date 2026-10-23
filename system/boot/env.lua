@@ -73,9 +73,7 @@ g.string = clone(string)
 g.coroutine = clone(coroutine)
 
 -- other stuff
-g.requestNeato = function()
-	return false
-end
+g.requestNeato = function() end
 
 -- neato-defined packages
 g.sys = include("sys")
