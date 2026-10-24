@@ -27,7 +27,7 @@ local function include(package, env)
 	local handle = files.open("0:system:/boot/env/" .. package .. ".lua")
 	local data = handle.read("a")
 	handle.close()
-	local f, err = load(data, "0:system:/boot/env/" .. package .. ".lua", nil, env or shallowcopy(_G))
+	local f, err = load(data, "KERNEL:env/" .. package .. ".lua", nil, env or shallowcopy(_G))
 	if err then
 		error(err)
 	end

@@ -1,5 +1,7 @@
 local fs = {}
 
+local createhandle = include("env/createhandle.lua")()
+
 local function assert(v, msg, lvl)
 	if not v then
 		error(msg or "assertion failed!", lvl + 1)
@@ -222,57 +224,47 @@ function fs.delete(path)
 end
 
 local function makeHandle(handle, mode, neetpath)
-	return {
-		open = true,
-		read = function(self, format)
-			assert(self.open, "cannot read from closed handle")
-			if mode ~= "r" and mode ~= "rb" then
-				return nil, "EBADF", "handle was opened for writing"
-			elseif format == "l" or format == nil then
-				return handle.read("l")
-			elseif format == "a" then
-				return handle.read("a")
-			elseif type(format) == "number" and math.floor(format) == format then
+	if mode == "r" or mode == "rb" then
+		return createhandle(
+			function(format)
 				return handle.read(format)
-			end
-			return nil, "EINVAL", "the format is not 'l', 'a' or an integer"
-		end,
-		write = function(self, ...)
-			assert(self.open, "cannot write to closed handle")
-			if mode == "r" or mode == "rb" then
-				return nil, "EBADF", "handle was opened for reading"
-			end
+			end,
+			nil,
+			function(whence, offset)
+				return handle.seek(whence, offset)
+			end,
+			function()
+				handle.flush()
+				return true
+			end,
+			function()
+				handle.close()
 
-			for _, bytes in ipairs({ ... }) do
-				assert(type(bytes) == "string" or type(bytes) == "number", "argument must be string or number")
-				handle.write(bytes)
+				-- update filelocks
+				_G.filelocks[neetpath] = _G.filelocks[neetpath] - 1
+				if _G.filelocks[neetpath] == 0 then
+					_G.filelocks[neetpath] = nil
+				end
 			end
-		end,
-		seek = function(self, whence, offset)
-			assert(self.open, "cannot seek on closed handle")
-			if whence ~= "set" and whence ~= "cur" and whence ~= "end" then
-				return nil, "EINVAL", "invalid whence"
-			end
+		)
+	else
+		return createhandle(nil, function(bytes)
+			handle.write(bytes)
+		end, function(whence, offset)
 			return handle.seek(whence, offset)
-		end,
-		flush = function(self)
-			assert(self.open, "cannot flush closed handle")
+		end, function()
 			handle.flush()
 			return true
-		end,
-		close = function(self)
-			assert(self.open, "cannot close already closed handle")
+		end, function()
 			handle.close()
-			self.open = false
 
 			-- update filelocks
 			_G.filelocks[neetpath] = _G.filelocks[neetpath] - 1
 			if _G.filelocks[neetpath] == 0 then
 				_G.filelocks[neetpath] = nil
 			end
-			return true
-		end,
-	}
+		end)
+	end
 end
 
 function fs.open(path, mode)
