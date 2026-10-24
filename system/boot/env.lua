@@ -77,6 +77,7 @@ g.requestNeato = function() end
 g.sys = include("sys")
 g.event = include("event")
 g.fs = include("fs")
+g.env = include("env")
 include("require", g)
 include("loadfile", g)
 g.crypto = clone(_G.crypto)

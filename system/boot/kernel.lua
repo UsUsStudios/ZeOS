@@ -53,7 +53,7 @@ local function execute(path, cwd, env, nohook)
 	if err or not f then
 		panic("unable to open " .. path, err)
 	end
-	scheduler.new_process(f, nil, nohook)
+	scheduler.new_process(f, nil, nil, nohook)
 end
 
 scheduler.new_process(function()

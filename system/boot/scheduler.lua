@@ -16,8 +16,16 @@ function scheduler.queue(pcb)
 	table.insert(ready_queue, pcb.pid)
 end
 
+local function shallowcopy(t)
+	local copy = {}
+	for key, value in pairs(t) do
+		copy[key] = value
+	end
+	return copy
+end
+
 -- create a new process running the function fn with an optional parent pid and args
-function scheduler.new_process(fn, args, nohook)
+function scheduler.new_process(fn, ppid, args, nohook)
 	if fn == nil then
 		error("cannot start process with function nil")
 	end
@@ -30,6 +38,7 @@ function scheduler.new_process(fn, args, nohook)
 		error = nil, -- the error that the process exited with
 		yields = 0, -- how many yields have been processed by the scheduler
 		utime = 0, -- how many seconds has the CPU spent running this process's code
+		env = ppid and shallowcopy(scheduler.processes[ppid].env) or {}, -- from ext.env
 		event_queue = {}, -- per-process infinite event queue
 	}
 	pcb.co = coroutine.create(function()
