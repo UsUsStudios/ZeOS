@@ -1,7 +1,7 @@
 return {
 	["Config"] = {
 		["DefaultEntry"] = 1, -- the option that appears highlighted first when entering the boot menu
-		["Autoboot"] = "none", -- or: index number for .Bootlist[i]
+		["Autoboot"] = 1, -- or: index number for .Bootlist[i]
 	},
 	["Bootlist"] = {
 		{

@@ -224,57 +224,7 @@ function fs.delete(path)
 	return nil, err1, err2, path
 end
 
-function fs.open(path, mode)
-	assert(type(path) == "string", "path must be string", 2)
-
-	local handle
-	if mode == "r" or mode == "rb" then
-		local neetpath, err1, err2 = walkNeatoPath(path)
-		if not neetpath then
-			return nil, err1, err2
-		elseif files.isDir(neetpath) then
-			return nil, "EISDIR", "path '" .. neetpath .. "' refers to a directory"
-		end
-		handle = files.open(neetpath, "r")
-	elseif mode ~= "a" and mode ~= "ab" and mode ~= "w" and mode ~= "wb" then
-		return nil, "EINVAL", "the mode '" .. tostring(mode) .. "' is not valid"
-	else
-		local neetpath, last, err2 = walkNeatoPath(path, true)
-		if neetpath then
-			local parts = split(path, ":")
-			if files.getPartition(parts[2], parts[1]).readonly then
-				return nil, "EROFS", "cannot write to read-only partition '" .. parts[1] .. ":" .. parts[2] .. "'"
-			elseif not files.isFile(neetpath .. last) then
-				files.open(neetpath .. last, "a").close()
-			end
-		else
-			return nil, last, err2
-		end
-	end
-
-	local neetpath, err1, err2 = walkNeatoPath(path)
-	if mode == "w" or mode == "wb" then
-		if not neetpath then
-			return nil, err1, err2
-		end
-		handle = files.open(neetpath, "w")
-	elseif mode == "a" or mode == "ab" then
-		if not neetpath then
-			return nil, err1, err2
-		end
-		handle = files.open(neetpath, "a")
-	end
-
-	if not neetpath then
-		return nil, err1, err2
-	end
-
-	-- update filelocks
-	if filelocks[neetpath] then
-		filelocks[neetpath] = filelocks[neetpath] + 1
-	else
-		filelocks[neetpath] = 1
-	end
+local function makeHandle(handle, mode, neetpath)
 	return {
 		open = true,
 		read = function(self, format)
@@ -326,6 +276,61 @@ function fs.open(path, mode)
 			return true
 		end,
 	}
+end
+
+function fs.open(path, mode)
+	assert(type(path) == "string", "path must be string", 2)
+
+	local handle
+	if mode == "r" or mode == "rb" then
+		local neetpath, err1, err2 = walkNeatoPath(path)
+		if not neetpath then
+			return nil, err1, err2
+		elseif files.isDir(neetpath) then
+			return nil, "EISDIR", "path '" .. neetpath .. "' refers to a directory"
+		end
+		handle = files.open(neetpath, "r")
+	elseif mode ~= "a" and mode ~= "ab" and mode ~= "w" and mode ~= "wb" then
+		return nil, "EINVAL", "the mode '" .. tostring(mode) .. "' is not valid"
+	else
+		local neetpath, last, err2 = walkNeatoPath(path, true)
+		if neetpath then
+			local parts = split(path, ":")
+			if files.getPartition(parts[2], parts[1]).readonly then
+				return nil, "EROFS", "cannot write to read-only partition '" .. parts[1] .. ":" .. parts[2] .. "'"
+			elseif not files.isFile(neetpath .. last) then
+				files.open(neetpath .. last, "a").close()
+			end
+		else
+			return nil, last, err2
+		end
+	end
+
+	local neetpath, err1, err2 = walkNeatoPath(path)
+	if mode == "w" or mode == "wb" then
+		if not neetpath then
+			return nil, err1, err2
+		end
+		handle = files.open(neetpath, "w")
+	elseif mode == "a" or mode == "ab" then
+		if not neetpath then
+			return nil, err1, err2
+		end
+		handle = files.open(neetpath, "a")
+	end
+
+	if not neetpath then
+		return nil, err1, err2
+	end
+
+	-- update filelocks
+	if filelocks[neetpath] then
+		filelocks[neetpath] = filelocks[neetpath] + 1
+	else
+		filelocks[neetpath] = 1
+	end
+
+	return makeHandle(handle, mode, neetpath)
 end
 
 function fs.resolve(path)
