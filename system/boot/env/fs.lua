@@ -73,6 +73,8 @@ end
 
 -- walks along a path from a starting disk and partition, and returns a NEATO improved path
 local function walk(disk, partition, filename)
+	assert(string.sub(filename, 1, 1) == "/", "filename portion of NEATO path must begin with a /", 4)
+
 	if not pcall(files.getPartitions, disk) then
 		return nil, "ENODEV", "the disk slot " .. disk .. " is not occupied"
 	end
@@ -115,7 +117,6 @@ local function walkNeatoPath(path, skiplast)
 	local parts = split(path, ":")
 	local disk, partition, filename = parts[1], parts[2], parts[3]
 
-	assert(string.sub(filename, 1, 1) == "/", "filename portion of NEATO path must begin with a /", 3)
 	local last
 
 	if skiplast then

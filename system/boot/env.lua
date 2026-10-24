@@ -25,11 +25,11 @@ local function clone(t)
 	return copy
 end
 
-local function include(package)
+local function include(package, env)
 	local handle = files.open("0:system:/boot/env/" .. package .. ".lua")
 	local data = handle.read("a")
 	handle.close()
-	local f, err = load(data, "0:system:/boot/env/" .. package .. ".lua", nil, shallowcopy(_G, "CWD", g.CWD))
+	local f, err = load(data, "0:system:/boot/env/" .. package .. ".lua", nil, env or shallowcopy(_G, "CWD", g.CWD))
 	if err then
 		error(err)
 	end
@@ -79,6 +79,8 @@ g.requestNeato = function() end
 g.sys = include("sys")
 g.event = include("event")
 g.fs = include("fs")
+include("require", g)
+include("loadfile", g)
 g.crypto = clone(_G.crypto)
 
 return g

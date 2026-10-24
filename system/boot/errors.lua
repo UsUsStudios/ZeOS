@@ -7,6 +7,8 @@ local function traceback(err)
 		table.insert(tracelist, str)
 	end
 
+	-- table.remove(tracelist, 3) -- remove the first frame
+
 	tracelist[#tracelist] = nil
 	tracelist[#tracelist] = nil
 	tracelist[#tracelist] = nil

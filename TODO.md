@@ -1,8 +1,8 @@
 - [ ] NEATO `core` APIs
   - [x] cwd
   - [x] requestNeato
-  - [ ] loadfile
-  - [ ] package-require
+  - [x] loadfile
+  - [x] package-require
   - [x] sys
   - [x] event
   - [x] fs
