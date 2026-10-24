@@ -5,10 +5,11 @@
   - [ ] package-require
   - [x] sys
   - [x] event
-  - [ ] fs
+  - [x] fs
     - [x] basic stuff
-    - [ ] file handles
+    - [x] file handles
     - [x] disk IDs
+  - [ ] make everything return true, and turn the argument type checks to assertations
   - [ ] crypto
   - [ ] term
 

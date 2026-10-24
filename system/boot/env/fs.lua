@@ -1,5 +1,8 @@
 local fs = {}
 
+local filelocks = {} -- dictionary of path : number of handles open on path
+-- if zero, entry is removed
+
 local fs_points = {
 	["system.root"] = "0:system:/",
 	["system.bin"] = "0:system:/bin/",
@@ -74,7 +77,7 @@ local function walk(disk, partition, filename)
 
 	local path_segs = split(filename, "/")
 	local final_segs = { disk .. ":" .. partition .. ":" }
-	local concat_path
+	local concat_path = table.concat(final_segs, "/") .. "/"
 	for i, seg in ipairs(path_segs) do
 		if seg == "." then
 		elseif seg == ".." then
@@ -197,7 +200,7 @@ function fs.makeDir(path)
 		end
 		local parts = split(path, ":")
 		if files.getPartition(parts[2], parts[1]).readonly then
-			return nil, "EROFS", "cannot delete from read-only partition '" .. parts[1] .. ":" .. parts[2] .. "'"
+			return nil, "EROFS", "cannot write to read-only partition '" .. parts[1] .. ":" .. parts[2] .. "'"
 		end
 		files.makeDir(neetpath .. "/" .. last)
 		return true
@@ -220,8 +223,9 @@ function fs.delete(path)
 			return nil, "EPERM", "cannot delete partition root '" .. path .. "'"
 		elseif files.getPartition(parts[2], parts[1]).readonly then
 			return nil, "EROFS", "cannot delete from read-only partition '" .. parts[1] .. ":" .. parts[2] .. "'"
+		elseif filelocks[neetpath] then
+			return nil, "EBUSY", "path is in use"
 		end
-		-- TODO: prevent if path is in use
 		files.delete(neetpath)
 		return true
 	end
@@ -233,9 +237,103 @@ function fs.open(path, mode)
 		error("path must be string", 2)
 	end
 
-	-- TODO: make file handles
+	local handle
+	if mode == "r" or mode == "rb" then
+		local neetpath, err1, err2 = walkNeatoPath(path)
+		if not neetpath then
+			return nil, err1, err2
+		elseif files.isDir(neetpath) then
+			return nil, "EISDIR", "path '" .. neetpath .. "' refers to a directory"
+		end
+		handle = files.open(neetpath, "r")
+	elseif mode ~= "a" and mode ~= "ab" and mode ~= "w" and mode ~= "wb" then
+		return nil, "EINVAL", "the mode '" .. tostring(mode) .. "' is not valid"
+	else
+		local neetpath, last, err2 = walkNeatoPath(path, true)
+		if neetpath then
+			local parts = split(path, ":")
+			if files.getPartition(parts[2], parts[1]).readonly then
+				return nil, "EROFS", "cannot write to read-only partition '" .. parts[1] .. ":" .. parts[2] .. "'"
+			elseif not files.isFile(neetpath .. last) then
+				files.open(neetpath .. last, "a").close()
+			end
+		else
+			return nil, last, err2
+		end
+	end
 
-	return
+	local neetpath, err1, err2 = walkNeatoPath(path)
+	if mode == "w" or mode == "wb" then
+		if not neetpath then
+			return nil, err1, err2
+		end
+		handle = files.open(neetpath, "w")
+	elseif mode == "a" or mode == "ab" then
+		if not neetpath then
+			return nil, err1, err2
+		end
+		handle = files.open(neetpath, "a")
+	end
+
+	if not neetpath then
+		return nil, err1, err2
+	end
+
+	-- update filelocks
+	if filelocks[neetpath] then
+		filelocks[neetpath] = filelocks[neetpath] + 1
+	else
+		filelocks[neetpath] = 1
+	end
+	return {
+		open = true,
+		read = function(self, format)
+			assert(self.open, "cannot read from closed handle")
+			if mode ~= "r" and mode ~= "rb" then
+				return nil, "EBADF", "handle was opened for writing"
+			elseif format == "l" or format == nil then
+				return handle.read("l")
+			elseif format == "a" then
+				return handle.read("a")
+			elseif type(format) == "number" and math.floor(format) == format then
+				return handle.read(format)
+			end
+			return nil, "EINVAL", "the format is not 'l', 'a' or an integer"
+		end,
+		write = function(self, ...)
+			assert(self.open, "cannot write to closed handle")
+			if mode == "r" or mode == "rb" then
+				return nil, "EBADF", "handle was opened for reading"
+			end
+
+			for _, bytes in ipairs({ ... }) do
+				assert(type(bytes) == "string" or type(bytes) == "number", "argument must be string or number")
+				handle.write(bytes)
+			end
+		end,
+		seek = function(self, whence, offset)
+			assert(self.open, "cannot seek on closed handle")
+			if whence ~= "set" and whence ~= "cur" and whence ~= "end" then
+				return nil, "EINVAL", "invalid whence"
+			end
+			return handle.seek(whence, offset)
+		end,
+		flush = function(self)
+			assert(self.open, "cannot flush closed handle")
+			handle.flush()
+		end,
+		close = function(self)
+			assert(self.open, "cannot close already closed handle")
+			handle.close()
+			self.open = false
+
+			-- update filelocks
+			filelocks[neetpath] = filelocks[neetpath] - 1
+			if filelocks[neetpath] == 0 then
+				filelocks[neetpath] = nil
+			end
+		end,
+	}
 end
 
 function fs.resolve(path)
@@ -254,10 +352,26 @@ function fs.rename(old, new)
 		error("new must be string", 2)
 	end
 
-	-- TODO: make file handles
+	local oldpath, err1, err2 = walkNeatoPath(old)
+	if not oldpath then
+		return nil, err1, err2
+	end
+	local newpath, last, err3 = walkNeatoPath(new)
+	if not newpath then
+		return nil, last, err3
+	end
+	newpath = newpath .. last
 
-	return
+	-- WARNING: temporary, until redtoast adds rename function to files API
+	local oldh = fs.open(oldpath, "r")
+	local newh = fs.open(newpath, "w")
+	assert(oldh and newh)
+	newh:write(oldh:read("a"))
+	oldh:close()
+	newh:close()
 end
+
+fs.rename("0:system:/hi", "0:system:/hello")
 
 function fs.stat(path)
 	if type(path) ~= "string" then
@@ -276,8 +390,8 @@ end
 
 function fs.getDisks()
 	local disks = {}
-	for disk, _ in pairs(_G.attached_disks) do
-		disks[#disks + 1] = disk
+	for disk, slot in pairs(_G.attached_disks) do
+		disks[#disks + 1] = { slot = slot, id = disk }
 	end
 	return disks
 end
