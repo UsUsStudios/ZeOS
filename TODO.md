@@ -10,7 +10,7 @@
     - [x] file handles
     - [x] disk IDs
   - [x] make everything return true, and turn the argument type checks to assertations
-  - [ ] crypto
+  - [x] crypto
   - [ ] term
 
 - [ ] NEATO extensions
