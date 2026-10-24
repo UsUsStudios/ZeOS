@@ -1,10 +1,8 @@
 local g = {}
 
-g.CWD = ...
-
-local function shallowcopy(t, addkey, addval)
+local function shallowcopy(t)
 	local copy = {}
-	copy[addkey] = addval
+	copy.g = g
 	for key, value in pairs(t) do
 		copy[key] = value
 	end
@@ -29,7 +27,7 @@ local function include(package, env)
 	local handle = files.open("0:system:/boot/env/" .. package .. ".lua")
 	local data = handle.read("a")
 	handle.close()
-	local f, err = load(data, "0:system:/boot/env/" .. package .. ".lua", nil, env or shallowcopy(_G, "CWD", g.CWD))
+	local f, err = load(data, "0:system:/boot/env/" .. package .. ".lua", nil, env or shallowcopy(_G))
 	if err then
 		error(err)
 	end

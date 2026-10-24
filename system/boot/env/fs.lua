@@ -7,9 +7,6 @@ local function assert(v, msg, lvl)
 	return v
 end
 
-local filelocks = {} -- dictionary of path : number of handles open on path
--- if zero, entry is removed
-
 local fs_points = {
 	["system.root"] = "0:system:/",
 	["system.bin"] = "0:system:/bin/",
@@ -56,15 +53,15 @@ local function resolvePath(path)
 		return path
 	elseif #parts == 1 then
 		if string.sub(path, 1, 1) == "/" then
-			local cwdparts = split(CWD, ":")
-			assert(#cwdparts == 3, "invalid CWD", 3)
+			local cwdparts = split(g.CWD, ":")
+			assert(#cwdparts == 3, "invalid g.CWD", 3)
 
 			return table.concat({ cwdparts[1], cwdparts[2], path }, ":")
 		else
-			if string.sub(CWD, #CWD, #CWD) ~= "/" then
-				CWD = CWD .. "/"
+			if string.sub(g.CWD, #g.CWD, #g.CWD) ~= "/" then
+				g.CWD = g.CWD .. "/"
 			end
-			return CWD .. path
+			return g.CWD .. path
 		end
 	end
 
@@ -215,7 +212,7 @@ function fs.delete(path)
 			return nil, "EPERM", "cannot delete partition root '" .. path .. "'"
 		elseif files.getPartition(parts[2], parts[1]).readonly then
 			return nil, "EROFS", "cannot delete from read-only partition '" .. parts[1] .. ":" .. parts[2] .. "'"
-		elseif filelocks[neetpath] then
+		elseif _G.filelocks[neetpath] then
 			return nil, "EBUSY", "path is in use"
 		end
 		files.delete(neetpath)
@@ -269,9 +266,9 @@ local function makeHandle(handle, mode, neetpath)
 			self.open = false
 
 			-- update filelocks
-			filelocks[neetpath] = filelocks[neetpath] - 1
-			if filelocks[neetpath] == 0 then
-				filelocks[neetpath] = nil
+			_G.filelocks[neetpath] = _G.filelocks[neetpath] - 1
+			if _G.filelocks[neetpath] == 0 then
+				_G.filelocks[neetpath] = nil
 			end
 			return true
 		end,
@@ -324,10 +321,10 @@ function fs.open(path, mode)
 	end
 
 	-- update filelocks
-	if filelocks[neetpath] then
-		filelocks[neetpath] = filelocks[neetpath] + 1
+	if _G.filelocks[neetpath] then
+		_G.filelocks[neetpath] = _G.filelocks[neetpath] + 1
 	else
-		filelocks[neetpath] = 1
+		_G.filelocks[neetpath] = 1
 	end
 
 	return makeHandle(handle, mode, neetpath)

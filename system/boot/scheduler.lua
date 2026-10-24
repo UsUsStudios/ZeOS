@@ -8,7 +8,6 @@ scheduler.time_period = 0.05 -- in seconds
 scheduler.cpu_load = 0 -- in a percentage
 scheduler.loads = {}
 scheduler.ticks = 0
-scheduler.running = nil -- the PCB of the process whose code is currently being run
 
 local ready_queue = {} -- the list of pids that should be run next tick
 
@@ -77,9 +76,9 @@ function scheduler.tick()
 		if pcb and pcb.state == "ready" then
 			local start = gettime()
 			pcb.state = "running"
-			scheduler.running = pcb
+			_G.thisproc = pcb
 			local ok, err, code = coroutine.resume(pcb.co)
-			scheduler.running = nil
+			_G.thisproc = nil
 			pcb.error = err
 
 			if pcb.state == "running" then -- if no system function changed its state
