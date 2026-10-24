@@ -1,9 +1,9 @@
 {
-    "entrypoint": "neatobios:bios.lua",
+    "entrypoint": "bios:bios.lua",
     "language": "Lua",
     "partitions": [
         {
-            "path": "neatobios",
+            "path": "bios",
             "source": -1,
             "readonly": false,
             "hidden": false

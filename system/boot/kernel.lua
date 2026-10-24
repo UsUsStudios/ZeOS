@@ -7,7 +7,7 @@ function _G.include(path, env)
 	local handle = files.open("0:system:/boot/" .. path)
 	local data = handle.read("a")
 	handle.close()
-	local f, err = load(data, "0:system:/boot/" .. path, nil, env or _G)
+	local f, err = load(data, "KERNEL:" .. path, nil, env or _G)
 	if err then
 		error(err)
 	end
