@@ -1,5 +1,12 @@
 local sys = {}
 
+local function assert(v, msg, lvl)
+	if not v then
+		error(msg or "assertion failed!", lvl + 1)
+	end
+	return v
+end
+
 local extensions = {}
 -- add an extension to the list; string, int (version)
 local function add(extension, version)
@@ -32,15 +39,9 @@ function sys.getExtensions()
 end
 
 function sys.hasExtension(name, version)
-	if type(name) ~= "string" then
-		error("name must be string", 2)
-	end
-	if type(version) ~= "number" and version ~= nil then
-		error("version must be int or nil", 2)
-	end
-	if math.floor(version) ~= version then
-		error("version must be an integer", 2)
-	end
+	assert(type(name) == "string", "name must be string", 2)
+	assert(type(version) == "number" or version == nil, "version must be int or nil", 2)
+	assert(math.floor(version) == version, "version must be an integer", 2)
 
 	if version then
 		return extensions[name] == version
@@ -49,9 +50,7 @@ function sys.hasExtension(name, version)
 end
 
 function sys.sleep(seconds)
-	if type(seconds) ~= "number" then
-		error("version must be number", 2)
-	end
+	assert(type(seconds) == "number", "seconds must be number", 2)
 
 	if seconds < 0 then
 		return nil, "EINVAL", "cannot sleep for a negative amount of time"

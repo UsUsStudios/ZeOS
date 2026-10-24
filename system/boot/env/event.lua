@@ -1,12 +1,15 @@
 local event = {}
 
+local function assert(v, msg, lvl)
+	if not v then
+		error(msg or "assertion failed!", lvl + 1)
+	end
+	return v
+end
+
 function event.pull(filter, timeout)
-	if type(filter) ~= "string" and filter ~= nil then
-		error("filter must be string or nil", 2)
-	end
-	if type(timeout) ~= "number" and timeout ~= nil then
-		error("timeout must be number or nil", 2)
-	end
+	assert(type(filter) == "string" or filter == nil, "filter must be string or nil", 2)
+	assert(type(timeout) == "number" or timeout == nil, "timeout must be number or nil", 2)
 
 	local event_queue = scheduler.running.event_queue
 
@@ -38,9 +41,7 @@ function event.poll()
 end
 
 function event.push(name, ...)
-	if type(name) ~= "string" then
-		error("name must be string or nil", 2)
-	end
+	assert(type(name) == "string", "name must be string or nil", 2)
 
 	table.insert(scheduler.running.event_queue, { name, ... })
 

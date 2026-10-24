@@ -9,7 +9,7 @@
     - [x] basic stuff
     - [x] file handles
     - [x] disk IDs
-  - [ ] make everything return true, and turn the argument type checks to assertations
+  - [x] make everything return true, and turn the argument type checks to assertations
   - [ ] crypto
   - [ ] term
 

@@ -1,5 +1,12 @@
 local fs = {}
 
+local function assert(v, msg, lvl)
+	if not v then
+		error(msg or "assertion failed!", lvl + 1)
+	end
+	return v
+end
+
 local filelocks = {} -- dictionary of path : number of handles open on path
 -- if zero, entry is removed
 
@@ -50,9 +57,7 @@ local function resolvePath(path)
 	elseif #parts == 1 then
 		if string.sub(path, 1, 1) == "/" then
 			local cwdparts = split(CWD, ":")
-			if #cwdparts ~= 3 then
-				error("invalid CWD", 3)
-			end
+			assert(#cwdparts == 3, "invalid CWD", 3)
 
 			return table.concat({ cwdparts[1], cwdparts[2], path }, ":")
 		else
@@ -110,9 +115,7 @@ local function walkNeatoPath(path, skiplast)
 	local parts = split(path, ":")
 	local disk, partition, filename = parts[1], parts[2], parts[3]
 
-	if string.sub(filename, 1, 1) ~= "/" then
-		error("filename portion of NEATO path must begin with a /", 3)
-	end
+	assert(string.sub(filename, 1, 1) == "/", "filename portion of NEATO path must begin with a /", 3)
 	local last
 
 	if skiplast then
@@ -148,35 +151,27 @@ local function walkNeatoPath(path, skiplast)
 end
 
 function fs.exists(path)
-	if type(path) ~= "string" then
-		error("path must be string", 2)
-	end
+	assert(type(path) == "string", "path must be string", 2)
 
 	return walkNeatoPath(path) ~= nil
 end
 
 function fs.isFile(path)
-	if type(path) ~= "string" then
-		error("path must be string", 2)
-	end
+	assert(type(path) == "string", "path must be string", 2)
 
 	path = walkNeatoPath(path)
 	return path ~= nil and files.isFile(path)
 end
 
 function fs.isDir(path)
-	if type(path) ~= "string" then
-		error("path must be string", 2)
-	end
+	assert(type(path) == "string", "path must be string", 2)
 
 	path = walkNeatoPath(path)
 	return path ~= nil and files.isDir(path)
 end
 
 function fs.list(path)
-	if type(path) ~= "string" then
-		error("path must be string", 2)
-	end
+	assert(type(path) == "string", "path must be string", 2)
 
 	local neetpath, err1, err2 = walkNeatoPath(path)
 	if neetpath then
@@ -189,9 +184,7 @@ function fs.list(path)
 end
 
 function fs.makeDir(path)
-	if type(path) ~= "string" then
-		error("path must be string", 2)
-	end
+	assert(type(path) == "string", "path must be string", 2)
 
 	local neetpath, last, err2 = walkNeatoPath(path, true)
 	if neetpath then
@@ -209,9 +202,7 @@ function fs.makeDir(path)
 end
 
 function fs.delete(path)
-	if type(path) ~= "string" then
-		error("path must be string", 2)
-	end
+	assert(type(path) == "string", "path must be string", 2)
 
 	local neetpath, err1, err2 = walkNeatoPath(path)
 	if neetpath then
@@ -233,9 +224,7 @@ function fs.delete(path)
 end
 
 function fs.open(path, mode)
-	if type(path) ~= "string" then
-		error("path must be string", 2)
-	end
+	assert(type(path) == "string", "path must be string", 2)
 
 	local handle
 	if mode == "r" or mode == "rb" then
@@ -321,6 +310,7 @@ function fs.open(path, mode)
 		flush = function(self)
 			assert(self.open, "cannot flush closed handle")
 			handle.flush()
+			return true
 		end,
 		close = function(self)
 			assert(self.open, "cannot close already closed handle")
@@ -332,25 +322,20 @@ function fs.open(path, mode)
 			if filelocks[neetpath] == 0 then
 				filelocks[neetpath] = nil
 			end
+			return true
 		end,
 	}
 end
 
 function fs.resolve(path)
-	if type(path) ~= "string" then
-		error("path must be string", 2)
-	end
+	assert(type(path) == "string", "path must be string", 2)
 
 	return resolvePath(path)
 end
 
 function fs.rename(old, new)
-	if type(old) ~= "string" then
-		error("old must be string", 2)
-	end
-	if type(new) ~= "string" then
-		error("new must be string", 2)
-	end
+	assert(type(old) == "string", "old must be string", 2)
+	assert(type(new) == "string", "new must be string", 2)
 
 	local oldpath, err1, err2 = walkNeatoPath(old)
 	if not oldpath then
@@ -369,14 +354,14 @@ function fs.rename(old, new)
 	newh:write(oldh:read("a"))
 	oldh:close()
 	newh:close()
+
+	return true
 end
 
 fs.rename("0:system:/hi", "0:system:/hello")
 
 function fs.stat(path)
-	if type(path) ~= "string" then
-		error("path must be string", 2)
-	end
+	assert(type(path) == "string", "path must be string", 2)
 
 	local neetpath, err1, err2 = walkNeatoPath(path)
 
@@ -398,13 +383,9 @@ end
 
 function fs.getPartitions(disk)
 	if type(disk) == "number" then
-		if math.floor(disk) ~= disk then
-			error("version must be an integer", 2)
-		end
+		assert(math.floor(disk) == disk, "disk must be an integer", 2)
 	else
-		if type(disk) ~= "string" then
-			error("disk must be string or integer", 2)
-		end
+		assert(type(disk) == "string", "disk must be string or integer", 2)
 	end
 
 	if not pcall(files.getPartitions, disk) then
@@ -414,9 +395,7 @@ function fs.getPartitions(disk)
 end
 
 function fs.getPoint(point)
-	if type(point) ~= "string" then
-		error("point must be string", 2)
-	end
+	assert(type(point) == "string", "point must be string", 2)
 
 	return fs_points[point]
 end
